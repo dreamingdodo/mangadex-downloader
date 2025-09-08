@@ -135,13 +135,16 @@ def choose_chapter(manga_id):
                 params={"translatedLanguage[]": language},             
                 )
         print(r.json())
-        if str(r.json()["data"][0]["attributes"]["title"]) != "None": 
+        title = str(r.json()["data"][0]["attributes"]["title"])
+        print(title)
+        if title == "None" or title == "Oneshot": 
+            chapters = {"1.0": r.json()["data"][0]["id"]}
+        else: # its a oneshot
+            print(r.json()["data"][0]["attributes"]["title"])
             chapters = {
                     float(chapter["attributes"]["chapter"]): chapter["id"]
                     for chapter in r.json()["data"]
                     }
-        else: # its a oneshot
-            chapters = {"1.0": r.json()["data"][0]["id"]}
         f = open(os.path.join(script_dir, manga_id + ".json"), "at")
         f.write(json.dumps(chapters))
         f.close
