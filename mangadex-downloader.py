@@ -256,9 +256,9 @@ else:
     if len(r.json()["data"]) > 1:
         i = 0
         for manga_name in r.json()["data"]:
-            print(f"[{i}]" + manga_name["attributes"]["title"])
+            print(f"[{i}] " + next(iter(manga_name["attributes"]["title"].values())))
             i += 1
-        manga_id = r.json()["data"][input("select number: ")]["id"]
+        manga_id = r.json()["data"][int(input("select number: "))]["id"]
     elif len(r.json()["data"]) < 1:
         print("didnt find anything with that name")
         exit(1)
