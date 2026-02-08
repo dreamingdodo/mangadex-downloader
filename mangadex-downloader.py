@@ -191,7 +191,7 @@ def choose_chapter(manga_id):
                     f"{base_url}/manga/{manga_id}/feed",
                     params={"translatedLanguage[]": [language]},             
                     )
-        print(r.json()["data"])
+        # print(r.json()["data"])
         # title = str(r.json()["data"][0]["attributes"]["title"])
         # print(title)
         tags = []
