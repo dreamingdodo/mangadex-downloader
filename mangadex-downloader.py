@@ -66,6 +66,7 @@ def get_image_urls(chapter_id):
     r_json = r.json()
 
     if r_json["result"] != "ok":
+        print("could not find manga")
         return 1
 
     base_url = r_json["baseUrl"]
@@ -80,9 +81,45 @@ def get_image_urls(chapter_id):
     return urls
 
 def get_images(chapter_id):
+
     urls = get_image_urls(chapter_id)
     if urls == 1: #TODO send report automatically
         exit(1)
+
+    titles = get_titles(manga_id)
+    
+    name_found = False
+
+    for title in titles:
+        if os.path.isdir(title):
+            name_found = True 
+            os.chdir(title)
+    
+    if not name_found:
+        print("possible titles:")
+        i = 0
+        for title in titles:
+            print("[" + str(i) + "] " + title)
+            i += 1
+
+        name = titles[int(input("number: "))]
+        os.mkdir(name)
+        os.chdir(name)
+    
+
+
+    if os.path.isdir(language):
+        os.chdir(language)
+    else:
+        os.mkdir(language)
+        os.chdir(language)
+
+    if os.path.isdir(wanted_chapter):
+        os.chdir(wanted_chapter)
+    else:
+        os.mkdir(wanted_chapter)
+        os.chdir(wanted_chapter)
+
     i = 1
     for url in urls:
         print(url)
@@ -94,6 +131,15 @@ def get_images(chapter_id):
         f.close()
         i += 1
 
+def get_titles(manga_id):
+    titles = []
+    r = requests.get("https://api.mangadex.org/manga/" + manga_id)
+    attributes = r.json()["data"]["attributes"]
+    titles.extend(attributes["title"].values())
+    for alt_title in attributes["altTitles"]:
+        titles.extend(alt_title.values())
+
+    return titles
 
 def create_json(): # i fully know how stupid this is
     refresh_requirments = {
@@ -120,35 +166,54 @@ def read_json():
     f.close()
 
 def choose_chapter(manga_id):
-    if os.path.exists(os.path.join(script_dir, manga_id + ".json")):
-        f = open(os.path.join(script_dir, manga_id + ".json"), "rt")
-        file_str = f.read()
-        chapters = json.loads(file_str)
-        f.close
-    else:
+    possible_languages = []
+    r = requests.get("https://api.mangadex.org/manga/" + manga_id)
+    attributes = r.json()["data"]["attributes"]
+    possible_languages.append(attributes["originalLanguage"])
+    for lang in attributes["availableTranslatedLanguages"]:
+        possible_languages.append(lang)
+    print("possible_languages:")
+    for lang in possible_languages:
+        print(lang)
+    global language
+    language = input("language code(s) [en]: ")
+    if language == '':
+        language = "en"
+
+    if not os.path.exists(os.path.join(script_dir, 'data' , language + manga_id + ".json")):
         base_url = "https://api.mangadex.org"
-        language = [input("language code(s) [en]: ")]
-        if language[0] == '':
-            language = ["en"]
         r = requests.get(
-                f"{base_url}/manga/{manga_id}/feed",
-                params={"translatedLanguage[]": language},             
-                )
-        print(r.json())
-        title = str(r.json()["data"][0]["attributes"]["title"])
-        print(title)
-        if title == "None" or title == "Oneshot": 
+            f"{base_url}/manga/{manga_id}/feed",
+            params={"originalLanguage[]": [language]},             
+            )
+        if r.json()["data"] == []:
+            r = requests.get(
+                    f"{base_url}/manga/{manga_id}/feed",
+                    params={"translatedLanguage[]": [language]},             
+                    )
+        print(r.json()["data"])
+        # title = str(r.json()["data"][0]["attributes"]["title"])
+        # print(title)
+        tags = []
+        for tag in attributes["tags"]:
+            tags.append(tag["attributes"]["name"])
+        # print(tags)
+        if "Oneshot" in tags:
             chapters = {"1.0": r.json()["data"][0]["id"]}
-        else: # its a oneshot
-            print(r.json()["data"][0]["attributes"]["title"])
+        else:
             chapters = {
                     float(chapter["attributes"]["chapter"]): chapter["id"]
                     for chapter in r.json()["data"]
                     }
-        f = open(os.path.join(script_dir, manga_id + ".json"), "at")
+        f = open(os.path.join(script_dir,'data', language + manga_id + ".json"), "at")
         f.write(json.dumps(chapters))
         f.close
     
+    f = open(os.path.join(script_dir,'data', language + manga_id + ".json"), "rt")
+    file_str = f.read()
+    chapters = json.loads(file_str)
+    f.close
+
     print("possible chapters:")
     chapter_list = []
     for i in chapters.keys():
@@ -156,11 +221,12 @@ def choose_chapter(manga_id):
     for i in sorted(chapter_list):
         print(i)
 
+    global wanted_chapter
     wanted_chapter = str(float(input("chapter to download: ")))
     if wanted_chapter in chapters:
         return chapters[wanted_chapter] 
     else:
-        print(f"'{wanted_chapter}'not a chapter")
+        print(f"'{wanted_chapter}' is not a chapter")
         exit(1)
 
 if os.path.exists(os.path.join(script_dir, "info.json")):
@@ -168,7 +234,12 @@ if os.path.exists(os.path.join(script_dir, "info.json")):
 else:
     auth()
     create_json()
+    try:
+        os.mkdir('data')
+    except Exception as e:
+        raise e
 
-chapter_id = choose_chapter(input("manga id: "))
+manga_id = input("manga id: ")
+chapter_id = choose_chapter(manga_id)
 
 get_images(chapter_id)

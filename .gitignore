@@ -4,3 +4,4 @@ bin/*
 lib64
 lib/python3.13/*
 /*.json
+data
