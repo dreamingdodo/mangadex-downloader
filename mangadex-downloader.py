@@ -121,8 +121,9 @@ def get_images(chapter_id):
         os.chdir(wanted_chapter)
 
     i = 1
+    amount = len(urls)
     for url in urls:
-        print(url)
+        print(f"\rProgress: {round((i/amount)*100)}%", end="", flush=True)
         page = requests.get(url).content
         name = str(i) + re.search(r"(\.(?:jpg|jpeg|png|gif|webp|bmp|svg))(?:\?.*)?$", url).group(1)
         path = os.path.join(os.getcwd(), name)
@@ -164,6 +165,14 @@ def read_json():
     client_id = file_json["client_id"]
     client_secret = file_json["client_secret"]
     f.close()
+
+UUID_REGEX = re.compile(
+    r'^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$',
+    re.IGNORECASE
+)
+
+def is_uuid(value: str) -> bool:
+    return bool(UUID_REGEX.match(value))
 
 def choose_chapter(manga_id):
     possible_languages = []
@@ -239,7 +248,23 @@ else:
     except Exception as e:
         raise e
 
-manga_id = input("manga id: ")
+name = input("manga id or name: ")
+if is_uuid(name):
+    manga_id = name
+else:
+    r = requests.get(f"https://api.mangadex.org/manga", params={"title": name})
+    if len(r.json()["data"]) > 1:
+        i = 0
+        for manga_name in r.json()["data"]:
+            print(f"[{i}]" + manga_name["attributes"]["title"])
+            i += 1
+        manga_id = r.json()["data"][input("select number: ")]["id"]
+    elif len(r.json()["data"]) < 1:
+        print("didnt find anything with that name")
+        exit(1)
+    else:
+        manga_id = r.json()["data"][0]["id"]
+
 chapter_id = choose_chapter(manga_id)
 
 get_images(chapter_id)
