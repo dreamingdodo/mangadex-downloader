@@ -273,6 +273,6 @@ while True:
 
     os.chdir(home_dir)
 
-    if input(f"\nagain? y/n: ") == "n":
+    if input(f"\nagain [y/n]?: ") == "n":
         break
 
