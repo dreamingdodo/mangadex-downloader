@@ -264,7 +264,15 @@ else:
         exit(1)
     else:
         manga_id = r.json()["data"][0]["id"]
+while True:
+    home_dir = os.getcwd()
 
-chapter_id = choose_chapter(manga_id)
+    chapter_id = choose_chapter(manga_id)
 
-get_images(chapter_id)
+    get_images(chapter_id)
+
+    os.chdir(home_dir)
+
+    if input(f"\nagain? y/n: ") == "n":
+        break
+
