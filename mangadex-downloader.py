@@ -66,7 +66,7 @@ def get_image_urls(chapter_id):
     r_json = r.json()
 
     if r_json["result"] != "ok":
-        print("could not find manga")
+        print(f"\nserver says: {r_json['result']}")
         return 1
 
     base_url = r_json["baseUrl"]
@@ -102,7 +102,7 @@ def get_images(chapter_id):
             print("[" + str(i) + "] " + title)
             i += 1
 
-        name = titles[int(input("number: "))]
+        name = titles[int(input("number [0]: ").strip() or "0")]
         os.mkdir(name)
         os.chdir(name)
     
@@ -185,10 +185,8 @@ def choose_chapter(manga_id):
     for lang in possible_languages:
         print(lang)
     global language
-    language = input("language code(s) [en]: ")
-    if language == '':
-        language = "en"
-
+    language = input("language code(s) [en]: ").strip() or "en"
+    
     if not os.path.exists(os.path.join(script_dir, 'data' , language + manga_id + ".json")):
         base_url = "https://api.mangadex.org"
         r = requests.get(
@@ -231,9 +229,25 @@ def choose_chapter(manga_id):
         print(i)
 
     global wanted_chapter
-    wanted_chapter = str(float(input("chapter to download: ")))
-    if wanted_chapter in chapters:
-        return chapters[wanted_chapter] 
+    wanted_chapter = input("chapter(s) to download: ")
+    if "-" in wanted_chapter:
+        nums = wanted_chapter.partition("-")
+        for num in range(int(nums[0]), int(nums[2])):
+            if str(float(num)) in chapters:
+                wanted_chapter = str(num)
+                get_images(chapters[str(float(num))])
+                urls.clear()
+                os.chdir(home_dir)
+            else:
+                print(f"'{num}' is not a chapter") # only warn if chapter inbetween is missing
+        if str(float(nums[2])) in chapters:
+            wanted_chapter = str(int(nums[2]))
+            return chapters[str(float(nums[2]))]
+        else:
+            print(f"'{str(nums[2])}' is not a chapter")
+            exit(1)
+    elif str(float(wanted_chapter)) in chapters:
+        return chapters[str(float(wanted_chapter))] 
     else:
         print(f"'{wanted_chapter}' is not a chapter")
         exit(1)
@@ -258,7 +272,7 @@ else:
         for manga_name in r.json()["data"]:
             print(f"[{i}] " + next(iter(manga_name["attributes"]["title"].values())))
             i += 1
-        manga_id = r.json()["data"][int(input("select number: "))]["id"]
+        manga_id = r.json()["data"][int(input("select number [0]: ").strip() or "0")]["id"]
     elif len(r.json()["data"]) < 1:
         print("didnt find anything with that name")
         exit(1)
@@ -271,8 +285,10 @@ while True:
 
     get_images(chapter_id)
 
+    urls.clear()
+
     os.chdir(home_dir)
 
-    if input(f"\nagain [y/n]?: ") == "n":
+    if input(f"\nagain [y/n]? ") == "n":
         break
 
